@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BUPTravel - 北邮校园导览</title>
+    <link href="{{url_for('static',filename='css/bootstrap.min.css')}}" rel="stylesheet">
+    <link href="{{url_for('static',filename='css/style.css')}}" rel="stylesheet">
+    <script src="{{url_for('static',filename='js/style.js')}}"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* 新增：深蓝色背景区域样式 */
+        .search-bg {
+            background-color: #000066; /* 深蓝色背景 */
+            padding: 2rem;
+            margin-top: -2px; /* 消除轮播图与背景的间隙 */
+            color: white;
+        }
+
+        .search-title {
+            font-size: 2.5rem; /* 放大标题字体 */
+            margin-bottom: 1.5rem;
+        }
+
+        .highlight {
+            background-color: yellow;
+        }
+        .rating-stars {
+            display: flex;
+            font-size: 30px;
+            color: #708090;
+            margin-bottom: 20px;
+        }
+        .rating-star {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .rating-star.active {
+            color: #ffc107;
+        }
+        .card-title {
+            margin-bottom: 10px;
+        }
+        .current-rating-stars {
+            display: flex;
+            font-size: 45px;
+            color: #D3D3D3;
+            margin-bottom: 1px;
+        }
+        .current-rating-star {
+            cursor: default;
+        }
+        .current-rating-star.active {
+            color: #FF4500;
+        }
+        .rating-label {
+            font-size: 0.65em;
+            color: #FF4500;
+            display: flex;
+            align-items: center; /* 垂直居中 */
+            margin-right: 0.5rem; /* 与星星间距 */
+        }
+        .card {
+            height: 100%;
+        }
+        .card-img-cropped {
+            width: 100%;
+            height: 300px;
+            object-fit: cover;
+        }
+
+        .carousel-container {
+            position: relative;
+            height: 300px;
+            overflow: hidden;
+        }
+
+        .carousel-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.7;
+        }
+
+        .carousel-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start; /* 内容靠左顶部 */
+            align-items: flex-start; /* 子元素左对齐 */
+            color: #000;
+        }
+
+        .carousel-overlay h3 {
+            font-size: 3.5rem;
+            font-weight: bold;
+            margin-bottom: 0.3rem; /* 减少标题下方间距 */
+        }
+
+        .carousel-overlay p {
+            max-width: 70%;
+            margin-bottom: 1rem;
+        }
+
+        /* 修改评分容器为垂直排列 */
+        .rating-container {
+            display: flex;
+            flex-direction: column; /* 垂直排列 */
+            align-items: flex-start;
+            gap: 0.1rem; /* 减少间距 */
+            margin-bottom: 1.5rem;
+        }
+
+        /* 调整背景容器样式 */
+        .rating-background {
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 35px 40px;
+            border-radius: 20px;
+            max-width: 60%; /* 限制最大宽度 */
+            margin-top: 20px;
+            margin-left: 0; /* 左侧边距清零 */
+            box-shadow: 2px 2px 10px rgba(0,0,0,0.8); /* 添加阴影增强立体感 */
+        }
+
+        /* 返回按钮样式 */
+        .return-btn {
+            position: absolute; /* 绝对定位 */
+            bottom: 2rem; /* 距离底部2rem */
+            right: 2rem; /* 距离右侧2rem */
+            background-color: white; /* 深灰色背景 */
+            border-color: white; /* 深灰色边框 */
+            color: black; /* 白色文字 */
+            margin: 0; /* 移除原有间距 */
+        }
+        .return-btn:hover {
+            background-color: #555555; /* 悬停时颜色加深 */
+            border-color: #555555;
+        }
+
+        /* 修改搜索按钮样式 */
+        .btn-search {
+            background-color: #333; /* 深灰色按钮 */
+            color: white;
+            border-color: #333;
+        }
+        .btn-search:hover {
+            background-color: #222;
+        }
+
+        /* 缩短类别筛选框宽度 */
+        .form-select {
+            max-width: 120px; /* 进一步限制下拉框宽度 */
+        }
+
+        /* 给搜索框添加底色 */
+        .form-control {
+            background-color: #f0f0f0; /* 浅灰色底色，可根据需要调整颜色 */
+        }
+
+        /* 加粗、放大“场所查询” */
+        .search-heading {
+            font-size: 1.5rem; /* 放大字体 */
+            font-weight: bold; /* 加粗字体 */
+        }
+    </style>
+    <script>
+        function submitFormOnChange() {
+            document.getElementById('searchForm').submit();
+        }
+    </script>
+</head>
+<body>
+  <!-- 动态背景导航栏 -->
+  <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+    <div class="container">
+      <a class="navbar-brand" href="{{url_for('index')}}">
+        <span class="ms-2 d-none d-md-inline">BUPTravel</span>
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav me-auto">
+          <li class="nav-item"><a class="nav-link " href="{{url_for('index')}}">首页</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{url_for('index_about')}}">打卡指南</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{url_for('index_area')}}">行程规划</a></li>
+          <li class="nav-item"><a class="nav-link active" href="{{url_for('index_attraction')}}">场所查询</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{url_for('index_cultural')}}">回忆归档</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{url_for('index_food111')}}">味觉漫游</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{url_for('index_food')}}">我有话说</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{url_for('index_traffic')}}">视频生成</a></li>
+        </ul>
+        <div class="d-flex">
+          {% if 'username' in session %}
+            <span class="navbar-text me-3">欢迎, {{ session['username'] }}</span>
+            <a href="{{url_for('logout')}}" class="btn btn-outline-light btn-sm">退出</a>
+          {% else %}
+            <a href="{{url_for('index_login')}}" class="btn btn-outline-light btn-sm me-2">登录</a>
+            <a href="{{url_for('index_register')}}" class="btn btn-warning btn-sm">注册</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </nav>
+
+    <!-- 轮播图部分 -->
+    <div class="carousel-container">
+        <img src="{{ url_for('static', filename=image_path) }}" class="carousel-img" alt="{{ attraction_info.name }}">
+        <div class="carousel-overlay">
+            <!-- 将标题包裹进背景容器 -->
+            <div class="rating-background">
+                <h3>{{ attraction_info.name }}</h3> <!-- 标题移入背景容器 -->
+                <div class="rating-container">
+                    <div class="current-rating-stars">
+                        <span class="rating-label">评价：</span>
+                        {% for i in range(5) %}
+                        <span class="current-rating-star {% if i < (attraction_info.score|default(0)|int) %}active{% endif %}">★</span>
+                        {% endfor %}
+                        {% if attraction_info.score is none %}
+                        <small class="text-muted ms-2">暂无评分</small>
+                        {% endif %}
+                    </div>
+
+                    <!-- 用户评分模块 -->
+                    <div class="user-rating">
+                        <div class="rating-stars" id="ratingStars">
+                            {% for i in range(5) %}
+                            <span class="rating-star {% if user_rating and i < user_rating %}active{% endif %}" data-rating="{{ i+1 }}">★</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div> <!-- 背景容器结束 -->
+            <!-- 返回按钮添加return-btn类 -->
+            <a href="{{url_for('index_attraction')}}" class="btn return-btn">返回列表</a>
+        </div>
+        </div>
+    </div>
+
+    <!-- 修改搜索表单部分 -->
+    <div class="container mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <!-- 应用新样式 -->
+            <h4 class="mb-3 mb-md-0 ms-2 search-heading">场所查询</h4>
+            <form id="searchForm" action="{{ url_for('place2', id=attraction_info.id) }}" method="GET" class="col-12 col-md-6 col-lg-4 mb-3 mb-lg-0">
+                <div class="input-group">
+                    <input type="text" name="q" class="form-control" placeholder="搜索场所..."
+                        value="{{ request.args.get('q', '') }}">
+                    <!-- 移除排序选择下拉框 -->
+                    <select name="category" class="form-select" onchange="submitFormOnChange()">
+                        <option value="">全部类别</option>
+                        <option value="景点" {% if request.args.get('category') == '景点' %}selected{% endif %}>景点</option>
+                        <option value="宿舍楼" {% if request.args.get('category') == '宿舍楼' %}selected{% endif %}>宿舍楼</option>
+                        <option value="运动场馆" {% if request.args.get('category') == '运动场馆' %}selected{% endif %}>运动场馆</option>
+                        <option value="教学楼" {% if request.args.get('category') == '教学楼' %}selected{% endif %}>教学楼</option>
+                        <option value="办公楼" {% if request.args.get('category') == '办公楼' %}selected{% endif %}>办公楼</option>
+                        <option value="其他" {% if request.args.get('category') == '其他' %}selected{% endif %}>其他</option>
+                    </select>
+                    <button type="submit" class="btn btn-outline-primary btn-sm">搜索</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if places %}
+    <!-- 结果展示部分 -->
+    <div class="container pb-5" style="margin-top: 1.5rem;">
+        <div class="row row-cols-1 row-cols-md-3 g-4">
+            {% for place in places %}
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <a href="{{ url_for('place3', id=place.id, attraction_id=attraction_info.id, q=keyword, sort_by=sort_by, category=category) }}">
+                        {% if place.image_path %}
+                            <img src="{{ url_for('static', filename=place.image_path.replace('\\', '/')) if place.image_path else url_for('static', filename='images/empty.jpg') }}"
+                                class="card-img-cropped"
+                                alt="{{ place.name }}">
+                        {% else %}
+                            <img src="{{ url_for('static', filename='images/empty.jpg') }}"
+                                class="card-img-cropped"
+                                alt="{{ place.name }}">
+                        {% endif %}
+                    </a>
+                    <div class="card-body">
+                        <h5 class="card-title">{{ place.name | highlight_keyword(request.args.get('q', '')) | safe }}</h5>
+                        <!-- 显示场所类别 -->
+                        <p class="card-text text-muted"> {{ place.type }}</p>
+                        <div class="text-end small text-muted">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <!-- 没有查询到结果时显示的内容 -->
+    <div class="text-center" style="margin-top: 100px; margin-bottom: 100px;">
+        <p class="text-muted">未查询到结果</p>
+    </div>
+    {% endif %}
+  <!-- 底部信息 -->
+  <footer class="footer">
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-4 mb-4 mb-lg-0">
+          <img src="{{url_for('static',filename='images/logo.jpg')}}" alt="BUPTravel" height="80">
+          <p class="mt-3">BUPTravel - 北邮校园导览平台，为您提供全方位的校园信息服务。</p>
+        </div>
+        <div class="col-lg-2 col-md-6 mb-4 mb-md-0">
+          <h5>快速链接</h5>
+          <ul class="list-unstyled">
+            <li><a href="{{url_for('index')}}">首页</a></li>
+            <li><a href="{{url_for('index_about')}}">打卡指南</a></li>
+            <li><a href="{{url_for('index_area')}}">行程规划</a></li>
+            <li><a href="{{url_for('index_attraction')}}">场所查询</a></li>
+          </ul>
+        </div>
+        <div class="col-lg-2 col-md-6 mb-4 mb-md-0">
+          <h5>更多服务</h5>
+          <ul class="list-unstyled">
+            <li><a href="{{url_for('index_cultural')}}">回忆归档</a></li>
+            <li><a href="{{url_for('index_food111')}}">味觉漫游</a></li>
+            <li><a href="{{url_for('index_food')}}">我有话说</a></li>
+            <li><a href="{{url_for('index_traffic')}}">视频生成</a></li>
+          </ul>
+        </div>
+        <div class="col-lg-4">
+          <h5>联系我们</h5>
+          <p><i class="fas fa-map-marker-alt me-2"></i> 北京市海淀区西土城路10号</p>
+          <p><i class="fas fa-envelope me-2"></i> contact@buptravel.com</p>
+          <div class="social-links mt-3">
+            <a href="#"><i class="fab fa-weixin fa-lg"></i></a>
+            <a href="#"><i class="fab fa-weibo fa-lg"></i></a>
+            <a href="#"><i class="fab fa-qq fa-lg"></i></a>
+          </div>
+        </div>
+      </div>
+      <hr>
+      <div class="text-center">
+        <p class="mb-0">&copy; 2025 BUPTravel. 版权所有.</p>
+      </div>
+    </div>
+  </footer>
+
+<script>
+    // 评分交互逻辑
+    const ratingStars = document.querySelectorAll('.rating-star');
+    let selectedRating = {{ user_rating|default(0) }};
+
+    ratingStars.forEach(star => {
+        star.addEventListener('click', async () => {
+            // 获取评分值
+            const rating = parseInt(star.dataset.rating);
+            selectedRating = rating;
+
+            // 更新星星样式
+            ratingStars.forEach((s, index) => {
+                s.classList.toggle('active', index < rating);
+            });
+
+            // 显示正在提交的提示
+            const ratingHint = document.createElement('small');
+            ratingHint.textContent = '正在提交评分...';
+            ratingHint.className = 'text-muted';
+
+            // 找到评分区域并添加提示
+            const ratingContainer = document.querySelector('.rating-container');
+            const existingHint = ratingContainer.querySelector('small.text-muted');
+            if (existingHint) {
+                ratingContainer.removeChild(existingHint);
+            }
+            ratingContainer.appendChild(ratingHint);
+
+            try {
+                // 提交评分
+                const response = await fetch('/rate_attraction', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        attraction_id: {{ attraction_info.id }},
+                        rating: rating
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    ratingHint.textContent = '评分成功！刷新页面...';
+                    // 立即刷新页面以显示最新评分
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1000);
+                } else {
+                    ratingHint.textContent = result.message || '评分失败';
+                    // 恢复星星状态
+                    ratingStars.forEach((s, index) => {
+                        s.classList.toggle('active', index < {{ user_rating|default(0) }});
+                    });
+                    selectedRating = {{ user_rating|default(0) }};
+                }
+            } catch (error) {
+                console.error('评分提交失败:', error);
+                ratingHint.textContent = '网络错误，请重试';
+                // 恢复星星状态
+                ratingStars.forEach((s, index) => {
+                    s.classList.toggle('active', index < {{ user_rating|default(0) }});
+                });
+                selectedRating = {{ user_rating|default(0) }};
+            }
+        });
+
+        // 悬停效果
+        star.addEventListener('mouseover', () => {
+            const rating = parseInt(star.dataset.rating);
+            ratingStars.forEach((s, index) => {
+                s.classList.toggle('active', index < rating);
+            });
+        });
+
+        star.addEventListener('mouseout', () => {
+            ratingStars.forEach((s, index) => {
+                s.classList.toggle('active', index < selectedRating);
+            });
+        });
+    });
+</script>
+</body>
+</html>

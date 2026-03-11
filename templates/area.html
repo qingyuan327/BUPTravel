@@ -1,0 +1,1422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BUPTravel - 北邮校园导览</title>
+    <link href="{{url_for('static',filename='css/bootstrap.min.css')}}" rel="stylesheet">
+    <link href="{{url_for('static',filename='css/style.css')}}" rel="stylesheet">
+    <script src="{{url_for('static',filename='js/style.js')}}"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- 高德地图API -->
+    <script type="text/javascript" src="https://webapi.amap.com/maps?v=1.4.15&key=7d7e99176299c3e4c7d5087297015d0e"></script>
+    <style>
+        .search-results {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .location-item {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .location-item:hover {
+            background-color: #f8f9fa;
+        }
+        .location-item:last-child {
+            border-bottom: none;
+        }
+        .waypoint-item {
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+        }
+        .route-step {
+            padding: 5px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .route-step:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+  <!-- 动态背景导航栏 -->
+  <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+    <div class="container">
+      <a class="navbar-brand" href="{{url_for('index')}}">
+        <span class="ms-2 d-none d-md-inline">BUPTravel</span>
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav me-auto">
+          <li class="nav-item"><a class="nav-link " href="{{url_for('index')}}">首页</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{url_for('index_about')}}">打卡指南</a></li>
+          <li class="nav-item"><a class="nav-link active" href="{{url_for('index_area')}}">行程规划</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{url_for('index_attraction')}}">场所查询</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{url_for('index_cultural')}}">回忆归档</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{url_for('index_food111')}}">味觉漫游</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{url_for('index_food')}}">我有话说</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{url_for('index_traffic')}}">视频生成</a></li>
+        </ul>
+        <div class="d-flex">
+          {% if 'username' in session %}
+            <span class="navbar-text me-3">欢迎, {{ session['username'] }}</span>
+            <a href="{{url_for('logout')}}" class="btn btn-outline-light btn-sm">退出</a>
+          {% else %}
+            <a href="{{url_for('index_login')}}" class="btn btn-outline-light btn-sm me-2">登录</a>
+            <a href="{{url_for('index_register')}}" class="btn btn-warning btn-sm">注册</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- 全屏视差标题区域 -->
+  <div class="parallax-header">
+    <div class="header-shapes">
+      <div class="shape shape-1"></div>
+      <div class="shape shape-2"></div>
+      <div class="shape shape-3"></div>
+    </div>
+    <div class="header-content">
+      <h1 class="header-title">行程规划</h1>
+      <p class="header-subtitle">以脚步丈量校园，用规划串联记忆。每一条路线，都是一场穿越历史与现实的对话，在方寸之地，邂逅北邮的千年文脉与今朝风华。</p>
+    </div>
+    <div class="header-scroll">
+      <i class="bi bi-chevron-down" style="font-size: 2rem;"></i>
+    </div>
+  </div>
+
+  <!-- 路径规划主要内容 -->
+  <div class="container-fluid py-5" style="margin-top: 100px;">
+    <div class="row">
+      <!-- 左侧控制面板 -->
+      <div class="col-lg-4 col-md-5">
+        <div class="card shadow-lg">
+          <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-route me-2"></i>路线规划</h5>
+          </div>
+          <div class="card-body">
+            <!-- 起点选择 -->
+            <div class="mb-3">
+              <label class="form-label fw-bold">起点</label>
+              <select class="form-select" id="startLocation">
+                <option value="">请选择起点</option>
+              </select>
+            </div>
+
+            <!-- 终点选择 -->
+            <div class="mb-3">
+              <label class="form-label fw-bold">终点</label>
+              <select class="form-select" id="endLocation">
+                <option value="">请选择终点</option>
+              </select>
+            </div>
+
+            <!-- 路径信息预览 -->
+            <div class="mb-3" id="routePreview" style="display: none;">
+              <label class="form-label fw-bold">路径预览</label>
+              <div class="alert alert-light border-info">
+                <small class="text-muted">
+                  <i class="fas fa-info-circle me-1"></i>
+                  选择起点和终点后，系统将自动计算最优路径和途经点
+                </small>
+              </div>
+            </div>
+
+            <!-- 交通方式 -->
+            <div class="mb-3">
+              <label class="form-label fw-bold">交通方式</label>
+              <div class="btn-group w-100" role="group">
+                <input type="radio" class="btn-check" name="transportMode" id="walkMode" value="walk" checked>
+                <label class="btn btn-outline-primary" for="walkMode">
+                  <i class="fas fa-walking me-1"></i>步行
+                </label>
+
+                <input type="radio" class="btn-check" name="transportMode" id="bikeMode" value="bike">
+                <label class="btn btn-outline-primary" for="bikeMode">
+                  <i class="fas fa-bicycle me-1"></i>骑行
+                </label>
+
+                <input type="radio" class="btn-check" name="transportMode" id="busMode" value="bus">
+                <label class="btn btn-outline-primary" for="busMode">
+                  <i class="fas fa-bus me-1"></i>公交
+                </label>
+              </div>
+            </div>
+
+            <!-- 优化策略 -->
+            <div class="mb-3">
+              <label class="form-label fw-bold">优化策略</label>
+              <div class="btn-group w-100" role="group">
+                <input type="radio" class="btn-check" name="strategy" id="timeStrategy" value="time" checked>
+                <label class="btn btn-outline-success" for="timeStrategy">
+                  <i class="fas fa-clock me-1"></i>最短时间
+                </label>
+
+                <input type="radio" class="btn-check" name="strategy" id="distanceStrategy" value="distance">
+                <label class="btn btn-outline-success" for="distanceStrategy">
+                  <i class="fas fa-route me-1"></i>最短距离
+                </label>
+              </div>
+            </div>
+
+            <!-- 规划按钮 -->
+            <button type="button" class="btn btn-primary w-100 mb-3" id="planRouteBtn">
+              <i class="fas fa-search me-2"></i>开始规划
+            </button>
+
+            <!-- 路线信息显示 -->
+            <div id="routeInfo" class="alert alert-info d-none">
+              <h6 class="fw-bold">路线信息</h6>
+              <div id="routeDetails"></div>
+            </div>
+
+            <!-- 保存路线 -->
+            <div id="saveRouteSection" class="d-none">
+              <div class="input-group mb-2">
+                <input type="text" class="form-control" id="routeName" placeholder="输入路线名称">
+                <button class="btn btn-success" id="saveRouteBtn">
+                  <i class="fas fa-save me-1"></i>保存
+                </button>
+              </div>
+            </div>
+
+            <!-- 我的路线 -->
+            <div class="mt-3">
+              <button type="button" class="btn btn-outline-info w-100" id="myRoutesBtn">
+                <i class="fas fa-list me-2"></i>我的路线
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 地点搜索 -->
+        <div class="card shadow-lg mt-3">
+          <div class="card-header bg-info text-white">
+            <h6 class="mb-0">
+              <i class="fas fa-search me-2"></i>地点搜索
+              <small class="d-block mt-1" style="font-size: 0.8rem; opacity: 0.9;">
+                点击搜索结果可在地图上定位并设为起点/终点
+              </small>
+            </h6>
+          </div>
+          <div class="card-body">
+            <div class="input-group mb-3">
+              <input type="text" class="form-control" id="searchInput" placeholder="输入地点名称进行搜索...">
+              <button class="btn btn-outline-secondary" id="searchBtn">
+                <i class="fas fa-search"></i>
+              </button>
+            </div>
+            <div class="mb-3">
+              <label class="form-label small text-muted">按类型筛选：</label>
+              <select class="form-select form-select-sm" id="locationTypeFilter">
+                <option value="">所有类型</option>
+                <option value="教学楼">教学楼</option>
+                <option value="图书馆">图书馆</option>
+                <option value="实验楼">实验楼</option>
+                <option value="宿舍楼">宿舍楼</option>
+                <option value="食堂">食堂</option>
+                <option value="体育设施">体育设施</option>
+                <option value="景观">景观</option>
+                <option value="服务设施">服务设施</option>
+              </select>
+            </div>
+            <div class="alert alert-light border-info" style="font-size: 0.85rem; padding: 0.5rem;">
+              <i class="fas fa-lightbulb text-info me-1"></i>
+              <strong>使用提示：</strong>
+              <ul class="mb-0 mt-1 ps-3">
+                <li>搜索或筛选地点后，点击结果可在地图上查看位置</li>
+                <li>在地图标记的弹窗中可快速设置为起点或终点</li>
+                <li>也可直接在上方下拉框中选择起点和终点</li>
+              </ul>
+            </div>
+            <div id="searchResults" class="search-results"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右侧地图 -->
+      <div class="col-lg-8 col-md-7">
+        <div class="card shadow-lg">
+          <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-map me-2"></i>北邮校园地图</h5>
+            <div class="btn-group btn-group-sm">
+              <button type="button" class="btn btn-light btn-sm" id="togglePOIBtn" title="显示/隐藏地点标记">
+                <i class="fas fa-map-marker-alt me-1"></i>地点标记
+              </button>
+              <button type="button" class="btn btn-light btn-sm" id="clearMapBtn">
+                <i class="fas fa-eraser me-1"></i>清除
+              </button>
+              <button type="button" class="btn btn-light btn-sm" id="centerMapBtn">
+                <i class="fas fa-crosshairs me-1"></i>居中
+              </button>
+            </div>
+          </div>
+          <div class="card-body p-0">
+            <div id="mapContainer" style="height: 750px; width: 100%;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 校园景点介绍 -->
+  <div class="container py-5">
+    <h3 class="text-center mb-4">校园主要景点</h3>
+    <div class="row">
+      <div class="col-md-6 mb-3">
+        <div class="card h-100">
+          <div class="card-body">
+            <h5 class="card-title text-primary">主席像</h5>
+            <p class="card-text">毛主席雕像坐落在教三和教四之间的花园里，建于文革时期，作者为胡世英。</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6 mb-3">
+        <div class="card h-100">
+          <div class="card-body">
+            <h5 class="card-title text-primary">北邮校训石</h5>
+            <p class="card-text">校训石放置于教学楼中心处，和北京邮电大学西门相对，所用石材是从泰山精心选取的泰山石，上面刻印北邮的校训"厚德博学、敬业乐群"。</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6 mb-3">
+        <div class="card h-100">
+          <div class="card-body">
+            <h5 class="card-title text-primary">摩斯电码路</h5>
+            <p class="card-text">北邮西门到校训石之间步行道的铺装以世界上第一条电报码摩斯码为蓝本，将校训的文字内容在校训石前面铺陈开。</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6 mb-3">
+        <div class="card h-100">
+          <div class="card-body">
+            <h5 class="card-title text-primary">李白烈士雕像</h5>
+            <p class="card-text">李白烈士雕像位于科学会堂南侧的小花园内，1995年9月由上海市邮电管理局建赠。李白烈士是电影《永不消逝的电波》中所写的原型。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 底部信息 -->
+  <footer class="footer">
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-4 mb-4 mb-lg-0">
+          <img src="{{url_for('static',filename='images/logo.jpg')}}" alt="BUPTravel" height="80">
+          <p class="mt-3">BUPTravel - 北邮校园导览平台，为您提供全方位的校园信息服务。</p>
+        </div>
+        <div class="col-lg-2 col-md-6 mb-4 mb-md-0">
+          <h5>快速链接</h5>
+          <ul class="list-unstyled">
+            <li><a href="{{url_for('index')}}">首页</a></li>
+            <li><a href="{{url_for('index_about')}}">打卡指南</a></li>
+            <li><a href="{{url_for('index_area')}}">行程规划</a></li>
+            <li><a href="{{url_for('index_travel')}}">场所查询</a></li>
+          </ul>
+        </div>
+        <div class="col-lg-2 col-md-6 mb-4 mb-md-0">
+          <h5>更多服务</h5>
+          <ul class="list-unstyled">
+            <li><a href="{{url_for('index_cultural')}}">回忆归档</a></li>
+            <li><a href="{{url_for('index_food111')}}">味觉漫游</a></li>
+            <li><a href="{{url_for('index_food')}}">我有话说</a></li>
+            <li><a href="{{url_for('index_traffic')}}">视频生成</a></li>
+          </ul>
+        </div>
+        <div class="col-lg-4">
+          <h5>联系我们</h5>
+          <p><i class="fas fa-map-marker-alt me-2"></i> 北京市海淀区西土城路10号</p>
+          <p><i class="fas fa-envelope me-2"></i> contact@buptravel.com</p>
+          <div class="social-links mt-3">
+            <a href="#"><i class="fab fa-weixin fa-lg"></i></a>
+            <a href="#"><i class="fab fa-weibo fa-lg"></i></a>
+            <a href="#"><i class="fab fa-qq fa-lg"></i></a>
+          </div>
+        </div>
+      </div>
+      <hr>
+      <div class="text-center">
+        <p class="mb-0">&copy; 2025 BUPTravel. 版权所有.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="{{url_for('static',filename='js/bootstrap.bundle.min.js')}}"></script>
+
+  <script>
+    // 全局变量
+    let map;
+    let locations = [];
+    let markers = [];
+    let routePolyline = null;
+    let currentRoute = null;
+    let waypointCount = 0;
+    let showPOIMarkers = false; // 控制是否显示POI标记
+
+    // 初始化地图
+    function initMap() {
+        // 北邮校园中心坐标
+        const center = [116.3574, 39.9632];
+
+        map = new AMap.Map('mapContainer', {
+            zoom: 16,
+            center: center,
+            mapStyle: 'amap://styles/normal'
+        });
+
+        // 添加地图控件
+        try {
+            // 使用插件方式加载控件
+            AMap.plugin(['AMap.Scale', 'AMap.ToolBar'], function() {
+                map.addControl(new AMap.Scale({
+                    position: 'LB' // 左下角
+                }));
+                map.addControl(new AMap.ToolBar({
+                    position: 'RT' // 右上角
+                }));
+
+            });
+        } catch (error) {
+            console.warn('地图控件加载失败:', error);
+        }
+
+        // 加载地点数据
+        loadLocations();
+    }
+
+    // 加载地点数据
+    function loadLocations() {
+        console.log('开始加载地点数据...');
+        fetch('/api/locations')
+            .then(response => {
+                console.log('API响应状态:', response.status);
+                if (response.status === 200) {
+                    return response.json();
+                } else {
+                    throw new Error(`API响应错误: ${response.status}`);
+                }
+            })
+            .then(data => {
+                console.log('API返回数据:', data);
+                if (data.success) {
+                    locations = data.locations;
+                    console.log(`成功获取 ${locations.length} 个地点数据`);
+                    populateLocationSelects();
+                    // 不自动显示POI标记，保持地图干净
+                    displaySearchResults(locations);
+                    console.log('地点数据加载完成，POI标记已隐藏');
+                } else {
+                    console.error('加载地点数据失败:', data.error);
+                    showLoginPrompt();
+                }
+            })
+            .catch(error => {
+                console.error('请求失败:', error);
+                showLoginPrompt();
+            });
+    }
+
+    // 显示登录提示
+    function showLoginPrompt() {
+        // 检查是否已经有提示了
+        if (document.querySelector('.alert-warning')) {
+            return;
+        }
+
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-info alert-dismissible fade show';
+        alertDiv.innerHTML = `
+            <strong>提示：</strong> API访问失败，可能需要登录。
+            <br><small>数据库中有42个地点数据，包括教学楼、图书馆、实验楼、宿舍楼、食堂、体育设施、景观等。</small>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+
+        const container = document.querySelector('.container-fluid');
+        container.insertBefore(alertDiv, container.firstChild);
+
+        // 加载示例数据以便演示
+        loadSampleData();
+    }
+
+    // 加载示例数据
+    function loadSampleData() {
+        locations = [
+            {id: 1, name: "教学楼一号楼", type: "教学楼", latitude: 39.9629, longitude: 116.3564, description: "主要的教学楼之一", heat: 95, score: 4.5},
+            {id: 2, name: "图书馆", type: "图书馆", latitude: 39.9625, longitude: 116.3570, description: "学习的好地方", heat: 92, score: 4.8},
+            {id: 3, name: "学一食堂", type: "食堂", latitude: 39.9635, longitude: 116.3560, description: "美味的食堂", heat: 95, score: 4.3},
+            {id: 4, name: "体育馆", type: "体育设施", latitude: 39.9620, longitude: 116.3580, description: "运动健身场所", heat: 80, score: 4.2},
+            {id: 5, name: "主席像", type: "景观", latitude: 39.9632, longitude: 116.3574, description: "校园标志性景观", heat: 90, score: 4.6}
+        ];
+
+        populateLocationSelects();
+        // 不自动显示POI标记，保持地图干净
+        displaySearchResults(locations);
+        console.log('已加载示例数据，共 ' + locations.length + ' 个地点，POI标记已隐藏');
+    }
+
+    // 填充地点选择框
+    function populateLocationSelects() {
+        console.log('开始填充地点选择框...');
+        const startSelect = document.getElementById('startLocation');
+        const endSelect = document.getElementById('endLocation');
+
+        if (!startSelect || !endSelect) {
+            console.error('找不到起点或终点选择框元素');
+            return;
+        }
+
+        // 清空现有选项
+        startSelect.innerHTML = '<option value="">请选择起点</option>';
+        endSelect.innerHTML = '<option value="">请选择终点</option>';
+
+        console.log(`准备添加 ${locations.length} 个地点到选择框`);
+        locations.forEach((location, index) => {
+            const option1 = new Option(location.name, location.id);
+            const option2 = new Option(location.name, location.id);
+            startSelect.add(option1);
+            endSelect.add(option2);
+            if (index < 5) {
+                console.log(`添加地点 ${index + 1}: ${location.name} (ID: ${location.id})`);
+            }
+        });
+
+
+    }
+
+    // 在地图上添加标记
+    function addMarkersToMap() {
+        // 清除现有标记
+        markers.forEach(marker => map.remove(marker));
+        markers = [];
+
+        if (!locations || locations.length === 0) {
+            return;
+        }
+
+        if (!showPOIMarkers) {
+            return;
+        }
+
+
+        locations.forEach((location, index) => {
+            try {
+                // 先尝试使用自定义图标
+                let marker;
+                try {
+                    marker = new AMap.Marker({
+                        position: [location.longitude, location.latitude],
+                        title: location.name,
+                        icon: new AMap.Icon({
+                            size: new AMap.Size(25, 34),
+                            image: getMarkerIcon(location.type),
+                            imageSize: new AMap.Size(25, 34)
+                        })
+                    });
+                } catch (iconError) {
+                    console.warn(`自定义图标失败，使用默认图标: ${iconError}`);
+                    // 如果自定义图标失败，使用默认标记
+                    marker = new AMap.Marker({
+                        position: [location.longitude, location.latitude],
+                        title: location.name
+                    });
+                }
+
+                // 添加点击事件
+                marker.on('click', function() {
+                    showLocationInfo(location);
+                });
+
+                map.add(marker);
+                markers.push(marker);
+
+
+            } catch (error) {
+                console.error(`添加标记失败 ${location.name}:`, error);
+            }
+        });
+
+        // 调整地图视野以显示所有标记
+        if (markers.length > 0) {
+            try {
+                map.setFitView(markers);
+            } catch (error) {
+                console.warn('调整地图视野失败:', error);
+            }
+        }
+    }
+
+    // 根据地点类型获取标记图标
+    function getMarkerIcon(type) {
+        const iconMap = {
+            '教学楼': '//a.amap.com/jsapi_demos/static/demo-center/icons/poi-marker-red.png',
+            '图书馆': '//a.amap.com/jsapi_demos/static/demo-center/icons/poi-marker-blue.png',
+            '实验楼': '//a.amap.com/jsapi_demos/static/demo-center/icons/poi-marker-orange.png',
+            '宿舍楼': '//a.amap.com/jsapi_demos/static/demo-center/icons/poi-marker-green.png',
+            '食堂': '//a.amap.com/jsapi_demos/static/demo-center/icons/poi-marker-yellow.png',
+            '体育设施': '//a.amap.com/jsapi_demos/static/demo-center/icons/poi-marker-purple.png',
+            '景观': '//a.amap.com/jsapi_demos/static/demo-center/icons/poi-marker-pink.png',
+            '服务设施': '//a.amap.com/jsapi_demos/static/demo-center/icons/poi-marker-gray.png'
+        };
+
+        return iconMap[type] || '//a.amap.com/jsapi_demos/static/demo-center/icons/poi-marker-red.png';
+    }
+
+    // 显示地点信息
+    function showLocationInfo(location) {
+        const infoWindow = new AMap.InfoWindow({
+            content: `
+                <div style="padding: 12px; min-width: 250px;">
+                    <h6 class="text-primary mb-2">
+                        <i class="fas fa-map-marker-alt me-1"></i>${location.name}
+                    </h6>
+                    <div class="mb-2">
+                        <small class="text-muted">
+                            <i class="fas fa-tag me-1"></i><strong>类型:</strong> ${location.type}<br>
+                            <i class="fas fa-fire me-1"></i><strong>热度:</strong> ${location.heat}<br>
+                            <i class="fas fa-star me-1"></i><strong>评分:</strong> ${location.score.toFixed(1)}
+                        </small>
+                    </div>
+                    <p class="small mb-3">${location.description || '暂无描述'}</p>
+                    <div class="d-grid gap-2">
+                        <div class="row g-1">
+                            <div class="col-6">
+                                <button class="btn btn-primary btn-sm w-100" onclick="setAsStart(${location.id})" title="设置为路径起点">
+                                    <i class="fas fa-play me-1"></i>设为起点
+                                </button>
+                            </div>
+                            <div class="col-6">
+                                <button class="btn btn-success btn-sm w-100" onclick="setAsEnd(${location.id})" title="设置为路径终点">
+                                    <i class="fas fa-flag-checkered me-1"></i>设为终点
+                                </button>
+                            </div>
+                        </div>
+                        <small class="text-muted text-center">
+                            <i class="fas fa-info-circle me-1"></i>点击按钮快速设置起点或终点
+                        </small>
+                    </div>
+                </div>
+            `,
+            offset: new AMap.Pixel(0, -30)
+        });
+
+        infoWindow.open(map, [location.longitude, location.latitude]);
+    }
+
+    // 设置起点
+    function setAsStart(locationId) {
+        document.getElementById('startLocation').value = locationId;
+        const location = locations.find(loc => loc.id === parseInt(locationId));
+        if (location) {
+            showToast(`已设置起点：${location.name}`, 'success');
+        }
+    }
+
+    // 设置终点
+    function setAsEnd(locationId) {
+        document.getElementById('endLocation').value = locationId;
+        const location = locations.find(loc => loc.id === parseInt(locationId));
+        if (location) {
+            showToast(`已设置终点：${location.name}`, 'success');
+        }
+    }
+
+    // 显示提示消息
+    function showToast(message, type = 'info') {
+        const toastContainer = document.getElementById('toastContainer') || createToastContainer();
+
+        const iconMap = {
+            'success': 'check-circle',
+            'warning': 'exclamation-triangle',
+            'danger': 'times-circle',
+            'info': 'info-circle'
+        };
+
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-white bg-${type} border-0`;
+        toast.setAttribute('role', 'alert');
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fas fa-${iconMap[type] || 'info-circle'} me-2"></i>
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        `;
+
+        toastContainer.appendChild(toast);
+        const bsToast = new bootstrap.Toast(toast, { delay: 3000 });
+        bsToast.show();
+
+        // 自动移除
+        toast.addEventListener('hidden.bs.toast', function() {
+            if (toastContainer.contains(toast)) {
+                toastContainer.removeChild(toast);
+            }
+        });
+    }
+
+    // 创建提示消息容器
+    function createToastContainer() {
+        const container = document.createElement('div');
+        container.id = 'toastContainer';
+        container.className = 'toast-container position-fixed top-0 end-0 p-3';
+        container.style.zIndex = '9999';
+        document.body.appendChild(container);
+        return container;
+    }
+
+    // 基于路径网络的路径规划
+    async function planRoute() {
+        const startLocationId = document.getElementById('startLocation').value;
+        const endLocationId = document.getElementById('endLocation').value;
+        const transportMode = document.querySelector('input[name="transportMode"]:checked').value;
+        const strategy = document.querySelector('input[name="strategy"]:checked').value;
+
+        if (!startLocationId || !endLocationId) {
+            showToast('请选择起点和终点', 'warning');
+            return;
+        }
+
+        if (startLocationId === endLocationId) {
+            showToast('起点和终点不能相同', 'warning');
+            return;
+        }
+
+
+
+        const requestData = {
+            start_location_id: parseInt(startLocationId),
+            end_location_id: parseInt(endLocationId),
+            waypoints: [], // A*算法会自动计算最优路径
+            transport_mode: transportMode,
+            strategy: strategy
+        };
+
+        // 显示加载状态
+        const planBtn = document.getElementById('planRouteBtn');
+        const originalText = planBtn.innerHTML;
+        planBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>基于路径网络规划中...';
+        planBtn.disabled = true;
+
+        try {
+            const response = await fetch('/api/plan_route', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestData)
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+
+                if (data.success) {
+                    currentRoute = data.route;
+                    await displayNetworkRoute(data.route);
+                    showNetworkRouteInfo(data.route);
+                    document.getElementById('saveRouteSection').classList.remove('d-none');
+                    showToast('路径规划成功！基于真实路径网络', 'success');
+                } else {
+                    showToast('路径规划失败: ' + data.error, 'danger');
+                }
+            } else {
+                showToast('路径规划请求失败', 'danger');
+            }
+        } catch (error) {
+            showToast('路径规划异常: ' + error.message, 'danger');
+        } finally {
+            planBtn.innerHTML = originalText;
+            planBtn.disabled = false;
+        }
+    }
+
+    // 模拟路径规划（用于演示）
+    function simulateRouteePlanning(requestData) {
+        const startLocation = locations.find(loc => loc.id === requestData.start_location_id);
+        const endLocation = locations.find(loc => loc.id === requestData.end_location_id);
+
+        if (!startLocation || !endLocation) {
+            showToast('找不到起点或终点信息', 'danger');
+            return;
+        }
+
+        // 计算直线距离（简化计算）
+        const distance = calculateDistance(
+            startLocation.latitude, startLocation.longitude,
+            endLocation.latitude, endLocation.longitude
+        );
+
+        // 根据交通方式计算时间
+        const speedMap = {
+            'walk': 5,    // 5 km/h
+            'bike': 15,   // 15 km/h
+            'bus': 25     // 25 km/h
+        };
+
+        const speed = speedMap[requestData.transport_mode] || 5;
+        const time = (distance / speed) * 60; // 转换为分钟
+
+        // 创建模拟路径
+        const mockRoute = {
+            path: [requestData.start_location_id, requestData.end_location_id],
+            total_distance: distance * 1000, // 转换为米
+            total_time: time,
+            transport_mode: requestData.transport_mode
+        };
+
+        currentRoute = mockRoute;
+        displayMockRoute(startLocation, endLocation);
+        showRouteInfo(mockRoute);
+        document.getElementById('saveRouteSection').classList.remove('d-none');
+
+        showToast('使用模拟数据生成路径（仅供演示）', 'info');
+    }
+
+    // 计算两点间距离（简化版）
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371; // 地球半径（公里）
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                  Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return R * c;
+    }
+
+    // 显示模拟路径
+    function displayMockRoute(startLocation, endLocation) {
+        // 清除现有路径
+        if (routePolyline) {
+            map.remove(routePolyline);
+        }
+
+        // 创建简单的直线路径
+        const pathCoordinates = [
+            [startLocation.longitude, startLocation.latitude],
+            [endLocation.longitude, endLocation.latitude]
+        ];
+
+        routePolyline = new AMap.Polyline({
+            path: pathCoordinates,
+            strokeColor: '#FF6600',
+            strokeWeight: 6,
+            strokeOpacity: 0.8,
+            strokeStyle: 'dashed' // 虚线表示模拟路径
+        });
+
+        map.add(routePolyline);
+
+        // 调整地图视野
+        map.setFitView([routePolyline]);
+    }
+
+    // 显示基于路径网络的路线
+    async function displayNetworkRoute(route) {
+        // 清除现有路径
+        if (routePolyline) {
+            map.remove(routePolyline);
+            routePolyline = null;
+        }
+
+        if (!route.path || route.path.length === 0) {
+            showToast('路径数据为空', 'warning');
+            return;
+        }
+
+        try {
+            // 获取路径详细信息（包含所有节点的坐标）
+            const response = await fetch('/api/route_details', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ path: route.path })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+
+                if (data.success && data.route_details && data.route_details.length > 0) {
+                    const pathCoordinates = data.route_details.map((point, index) => {
+                        return [point.longitude, point.latitude];
+                    });
+
+                    // 根据交通方式设置不同的路线样式
+                    const transportStyles = {
+                        'walk': {
+                            strokeColor: '#28a745',    // 绿色 - 步行
+                            strokeWeight: 6,
+                            strokeOpacity: 0.8,
+                            strokeStyle: 'solid',
+                            showDir: true
+                        },
+                        'bike': {
+                            strokeColor: '#fd7e14',    // 橙色 - 骑行
+                            strokeWeight: 8,
+                            strokeOpacity: 0.9,
+                            strokeStyle: 'dashed',     // 虚线样式
+                            showDir: true
+                        },
+                        'bus': {
+                            strokeColor: '#007bff',    // 蓝色 - 公交
+                            strokeWeight: 12,           // 更粗的线条
+                            strokeOpacity: 0.9,
+                            strokeStyle: 'solid',
+                            showDir: true
+                        }
+                    };
+
+                    const currentStyle = transportStyles[route.transport_mode] || transportStyles['walk'];
+
+                    // 调试信息
+                    console.log('🚀 路线样式调试信息:');
+                    console.log('交通方式:', route.transport_mode);
+                    console.log('选择的样式:', currentStyle);
+                    console.log('路径坐标数量:', pathCoordinates.length);
+                    console.log('路径节点:', route.path);
+
+                    // 显示路径差异提示
+                    const pathDifference = getPathDifferenceMessage(route.transport_mode, route.path);
+                    if (pathDifference) {
+                        showToast(pathDifference, 'info', 5000);
+                    }
+
+                    // 创建基于真实路径网络的路径线
+                    const polylineOptions = {
+                        path: pathCoordinates,
+                        strokeColor: currentStyle.strokeColor,
+                        strokeWeight: currentStyle.strokeWeight,
+                        strokeOpacity: currentStyle.strokeOpacity,
+                        strokeStyle: currentStyle.strokeStyle,
+                        zIndex: 100,            // 确保路径线在最上层
+                        showDir: currentStyle.showDir
+                    };
+
+                    console.log('🎨 Polyline选项:', polylineOptions);
+
+                    routePolyline = new AMap.Polyline(polylineOptions);
+
+                    map.add(routePolyline);
+
+                    // 添加起点和终点标记
+                    addRouteMarkers(data.route_details);
+
+                    // 调整地图视野以显示完整路径
+                    map.setFitView([routePolyline], false, [20, 20, 20, 20]);
+
+                    showToast(`路径显示成功，共 ${pathCoordinates.length} 个路径点`, 'success');
+                } else {
+                    showToast('路径详情数据无效', 'warning');
+                }
+            } else {
+                showToast('获取路径详情失败', 'danger');
+            }
+        } catch (error) {
+            showToast('显示路径异常: ' + error.message, 'danger');
+        }
+    }
+
+    // 添加路径起点、终点和途经点标记
+    function addRouteMarkers(routeDetails) {
+        if (routeDetails.length === 0) return;
+
+        // 清除之前的路径标记
+        if (window.routeMarkers) {
+            window.routeMarkers.forEach(marker => map.remove(marker));
+        }
+        window.routeMarkers = [];
+
+        routeDetails.forEach((point, index) => {
+            let markerContent, markerTitle;
+
+            if (index === 0) {
+                // 起点标记 - 绿色名称标签
+                markerContent = `<div style="display: flex; flex-direction: column; align-items: center;">
+                    <div style="background-color: #4CAF50; color: white; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: bold; white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.3); border: 2px solid white;">
+                        🚩 起点: ${point.name}
+                    </div>
+                    <div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 8px solid #4CAF50; margin-top: -2px;"></div>
+                </div>`;
+                markerTitle = `起点: ${point.name}`;
+            } else if (index === routeDetails.length - 1) {
+                // 终点标记 - 红色名称标签
+                markerContent = `<div style="display: flex; flex-direction: column; align-items: center;">
+                    <div style="background-color: #F44336; color: white; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: bold; white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.3); border: 2px solid white;">
+                        🏁 终点: ${point.name}
+                    </div>
+                    <div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 8px solid #F44336; margin-top: -2px;"></div>
+                </div>`;
+                markerTitle = `终点: ${point.name}`;
+            } else {
+                // 途经点标记 - 橙色名称标签
+                markerContent = `<div style="display: flex; flex-direction: column; align-items: center;">
+                    <div style="background-color: #FF9800; color: white; padding: 3px 6px; border-radius: 5px; font-size: 11px; font-weight: bold; white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.3); border: 2px solid white;">
+                        📍 ${point.name}
+                    </div>
+                    <div style="width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid #FF9800; margin-top: -2px;"></div>
+                </div>`;
+                markerTitle = `途经点: ${point.name}`;
+            }
+
+            const markerPosition = [point.longitude, point.latitude];
+            const marker = new AMap.Marker({
+                position: markerPosition,
+                title: markerTitle,
+                content: markerContent,
+                anchor: 'bottom-center', // 标记锚点设为底部中心，确保标记准确定位
+                offset: new AMap.Pixel(0, 0), // 移除偏移，精确对齐
+                zIndex: 200  // 确保标记在路径线之上
+            });
+
+            map.add(marker);
+            window.routeMarkers.push(marker);
+        });
+    }
+
+    // 显示基于路径网络的路线信息
+    async function showNetworkRouteInfo(route) {
+
+        const routeInfo = document.getElementById('routeInfo');
+        const routeDetails = document.getElementById('routeDetails');
+
+        const distance = (route.total_distance / 1000).toFixed(2);
+        const time = Math.round(route.total_time);
+        const transportModeText = {
+            'walk': '步行',
+            'bike': '骑行',
+            'bus': '公交'
+        };
+
+        // 根据交通方式显示不同的图标和颜色
+        const transportModeInfo = {
+            'walk': { icon: '🚶', color: '#28a745', description: '步行路线，可通过所有道路' },
+            'bike': { icon: '🚴', color: '#fd7e14', description: '骑行路线，避开地铁线路' },
+            'bus': { icon: '🚌', color: '#007bff', description: '公交路线，优先地铁和主要道路' }
+        };
+
+        // 获取起点和终点名称
+        const startLocation = locations.find(loc => loc.id === parseInt(document.getElementById('startLocation').value));
+        const endLocation = locations.find(loc => loc.id === parseInt(document.getElementById('endLocation').value));
+
+        // 获取途经地点详细信息
+        let waypointsHtml = '';
+        if (route.path && route.path.length > 2) {
+            try {
+                const response = await fetch('/api/route_details', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ path: route.path })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.route_details) {
+                        const waypoints = data.route_details.slice(1, -1); // 排除起点和终点
+                        if (waypoints.length > 0) {
+                            waypointsHtml = `
+                                <div class="route-step mb-3">
+                                    <i class="fas fa-map-signs text-warning me-2"></i>
+                                    <strong>途经地点:</strong>
+                                    <div class="mt-2">
+                                        ${waypoints.map((point, index) => `
+                                            <div class="d-flex align-items-center mb-1">
+                                                <span class="badge bg-warning text-dark me-2" style="min-width: 24px;">${index + 1}</span>
+                                                <span class="text-primary fw-bold">${point.name}</span>
+                                                <small class="text-muted ms-2">(${point.type || '未知类型'})</small>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                    <small class="text-muted d-block mt-1">共经过 ${waypoints.length} 个地点</small>
+                                </div>
+                            `;
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('获取途经地点信息失败:', error);
+            }
+        }
+
+        const currentTransportInfo = transportModeInfo[route.transport_mode] || transportModeInfo['walk'];
+
+        routeDetails.innerHTML = `
+            <div class="alert alert-info mb-3">
+                <i class="fas fa-network-wired me-2"></i>
+                <strong>基于真实路径网络规划</strong> - 使用A*算法计算最优路径
+            </div>
+
+            <div class="alert" style="background-color: ${currentTransportInfo.color}15; border-color: ${currentTransportInfo.color}; color: ${currentTransportInfo.color};">
+                <div class="d-flex align-items-center mb-2">
+                    <span style="font-size: 1.5em; margin-right: 10px;">${currentTransportInfo.icon}</span>
+                    <div>
+                        <strong>${transportModeText[route.transport_mode]}路线</strong>
+                        <div class="small">${currentTransportInfo.description}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="route-step mb-2">
+                <i class="fas fa-play text-success me-2"></i>
+                <strong>起点:</strong> ${startLocation ? startLocation.name : '未知'}
+                <small class="text-muted d-block">类型: ${startLocation ? startLocation.type : '未知'}</small>
+            </div>
+            <div class="route-step mb-2">
+                <i class="fas fa-flag-checkered text-danger me-2"></i>
+                <strong>终点:</strong> ${endLocation ? endLocation.name : '未知'}
+                <small class="text-muted d-block">类型: ${endLocation ? endLocation.type : '未知'}</small>
+            </div>
+            ${waypointsHtml}
+            <div class="route-step mb-2">
+                <i class="fas fa-route text-primary me-2"></i>
+                <strong>总距离:</strong> ${distance} 公里
+                <small class="text-muted d-block">基于实际路径网络计算</small>
+            </div>
+            <div class="route-step mb-2">
+                <i class="fas fa-clock text-warning me-2"></i>
+                <strong>预计时间:</strong> ${time} 分钟
+                <small class="text-muted d-block">
+                    ${route.transport_mode === 'walk' ? '步行速度约5km/h' :
+                      route.transport_mode === 'bike' ? '骑行速度约15km/h' :
+                      '公交平均速度约30km/h（含等车时间）'}
+                </small>
+            </div>
+            <div class="route-step mb-2">
+                <i class="fas fa-map-signs text-secondary me-2"></i>
+                <strong>路径节点:</strong> ${route.path ? route.path.length : 0} 个
+                <small class="text-muted d-block">包含途经的建筑和设施</small>
+            </div>
+            <div class="route-step">
+                <i class="fas fa-brain text-purple me-2"></i>
+                <strong>算法:</strong> A*最短路径算法
+                <small class="text-muted d-block">
+                    ${route.transport_mode === 'walk' ? '优化步行路径，可通过所有道路' :
+                      route.transport_mode === 'bike' ? '优化骑行路径，避开地铁线路' :
+                      '优化公交路径，优先地铁和主要道路'}
+                </small>
+            </div>
+        `;
+
+        routeInfo.classList.remove('d-none');
+        console.log('路线信息已显示');
+    }
+
+    // 显示路线信息（兼容旧版本）
+    function showRouteInfo(route) {
+        showNetworkRouteInfo(route);
+    }
+
+    // 获取路径差异提示信息
+    function getPathDifferenceMessage(transportMode, pathNodes) {
+        if (!pathNodes || pathNodes.length < 3) return null;
+
+        // 检查特定的路径差异
+        const hasNode50 = pathNodes.includes(50); // 健身房
+        const hasNode13 = pathNodes.includes(13); // 学生宿舍4号楼
+
+        if (transportMode === 'walk' && hasNode50) {
+            return '🚶 步行路线：经过健身房，适合步行锻炼';
+        } else if (transportMode === 'bike' && hasNode13) {
+            return '🚴 骑行路线：经过学生宿舍区，桥梁路径更适合骑行';
+        } else if (transportMode === 'bus' && hasNode13) {
+            return '🚌 公交路线：经过主要交通节点，适合公共交通';
+        }
+
+        // 通用差异提示
+        const modeNames = {
+            'walk': '🚶 步行路线：优先步行道，安全舒适',
+            'bike': '🚴 骑行路线：优先道路和桥梁，骑行便利',
+            'bus': '🚌 公交路线：优先主干道和地铁线，交通便捷'
+        };
+
+        return modeNames[transportMode] || null;
+    }
+
+
+
+    // 搜索地点
+    function searchLocations() {
+        const query = document.getElementById('searchInput').value.trim();
+        const type = document.getElementById('locationTypeFilter').value;
+
+        const params = new URLSearchParams();
+        if (query) params.append('q', query);
+        if (type) params.append('type', type);
+
+        fetch(`/api/locations?${params.toString()}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    displaySearchResults(data.locations);
+                } else {
+                    console.error('搜索失败:', data.error);
+                }
+            })
+            .catch(error => {
+                console.error('搜索请求失败:', error);
+            });
+    }
+
+    // 显示搜索结果
+    function displaySearchResults(searchResults) {
+        const resultsContainer = document.getElementById('searchResults');
+
+        if (searchResults.length === 0) {
+            resultsContainer.innerHTML = '<p class="text-muted text-center py-3">未找到相关地点</p>';
+            return;
+        }
+
+        resultsContainer.innerHTML = `
+            <div class="small text-muted mb-2">
+                <i class="fas fa-info-circle me-1"></i>
+                找到 ${searchResults.length} 个地点，点击可在地图上查看
+            </div>
+            ${searchResults.map(location => `
+                <div class="location-item border rounded p-2 mb-2" onclick="focusOnLocation(${location.id})" style="cursor: pointer; transition: all 0.2s;">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <div class="fw-bold text-primary">${location.name}</div>
+                            <div class="text-muted small">
+                                <i class="fas fa-tag me-1"></i>${location.type} |
+                                <i class="fas fa-fire me-1"></i>热度: ${location.heat} |
+                                <i class="fas fa-star me-1"></i>评分: ${location.score.toFixed(1)}
+                            </div>
+                            <div class="small text-secondary mt-1">${location.description || '暂无描述'}</div>
+                        </div>
+                        <div class="text-end">
+                            <small class="text-muted">点击查看</small>
+                            <br>
+                            <i class="fas fa-map-marker-alt text-info"></i>
+                        </div>
+                    </div>
+                </div>
+            `).join('')}
+        `;
+
+        // 添加悬停效果
+        resultsContainer.querySelectorAll('.location-item').forEach(item => {
+            item.addEventListener('mouseenter', function() {
+                this.style.backgroundColor = '#f8f9fa';
+                this.style.borderColor = '#007bff';
+            });
+            item.addEventListener('mouseleave', function() {
+                this.style.backgroundColor = '';
+                this.style.borderColor = '';
+            });
+        });
+    }
+
+    // 聚焦到指定地点
+    function focusOnLocation(locationId) {
+        const location = locations.find(loc => loc.id === locationId);
+        if (location) {
+            map.setCenter([location.longitude, location.latitude]);
+            map.setZoom(18);
+            showLocationInfo(location);
+        }
+    }
+
+    // 清除地图
+    function clearMap() {
+        if (routePolyline) {
+            map.remove(routePolyline);
+            routePolyline = null;
+        }
+
+        // 清除路径标记
+        if (window.routeMarkers) {
+            window.routeMarkers.forEach(marker => map.remove(marker));
+            window.routeMarkers = [];
+        }
+
+        document.getElementById('routeInfo').classList.add('d-none');
+        document.getElementById('saveRouteSection').classList.add('d-none');
+        currentRoute = null;
+
+        showToast('地图已清除', 'info');
+    }
+
+    // 地图居中
+    function centerMap() {
+        map.setCenter([116.3574, 39.9632]);
+        map.setZoom(16);
+    }
+
+    // 保存路线
+    function saveRoute() {
+        const routeName = document.getElementById('routeName').value.trim();
+        if (!routeName) {
+            showToast('请输入路线名称', 'warning');
+            return;
+        }
+
+        if (!currentRoute) {
+            showToast('没有可保存的路线', 'warning');
+            return;
+        }
+
+        const startLocationId = document.getElementById('startLocation').value;
+        const endLocationId = document.getElementById('endLocation').value;
+
+        const saveData = {
+            route_name: routeName,
+            start_location_id: parseInt(startLocationId),
+            end_location_id: parseInt(endLocationId),
+            waypoints: [], // 途经点由算法自动计算，不需要用户选择
+            total_distance: currentRoute.total_distance,
+            total_time: currentRoute.total_time,
+            transport_mode: currentRoute.transport_mode,
+            route_data: currentRoute
+        };
+
+        fetch('/api/save_route', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(saveData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('路线保存成功！');
+                document.getElementById('routeName').value = '';
+                document.getElementById('saveRouteSection').classList.add('d-none');
+            } else {
+                alert('保存失败: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('保存失败:', error);
+            alert('保存失败，请稍后重试');
+        });
+    }
+
+    // 显示我的路线
+    function showMyRoutes() {
+        fetch('/api/user_routes')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    displayMyRoutes(data.routes);
+                } else {
+                    alert('获取路线失败: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('获取路线失败:', error);
+                alert('获取路线失败，请稍后重试');
+            });
+    }
+
+    // 显示我的路线列表
+    function displayMyRoutes(routes) {
+        if (routes.length === 0) {
+            alert('您还没有保存的路线');
+            return;
+        }
+
+        const routeList = routes.map(route => `
+            <div class="route-item p-2 border-bottom">
+                <div class="fw-bold">${route.route_name}</div>
+                <div class="small text-muted">
+                    ${route.start_location} → ${route.end_location}
+                </div>
+                <div class="small">
+                    距离: ${(route.total_distance / 1000).toFixed(2)}km |
+                    时间: ${Math.round(route.total_time)}分钟 |
+                    ${route.transport_mode === 'walk' ? '步行' : route.transport_mode === 'bike' ? '骑行' : '公交'}
+                </div>
+                <div class="small text-muted">${route.created_at}</div>
+            </div>
+        `).join('');
+
+        // 创建模态框显示路线列表
+        const modal = document.createElement('div');
+        modal.className = 'modal fade';
+        modal.innerHTML = `
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">我的路线</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        ${routeList}
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        const bsModal = new bootstrap.Modal(modal);
+        bsModal.show();
+
+        // 模态框关闭后移除元素
+        modal.addEventListener('hidden.bs.modal', function() {
+            document.body.removeChild(modal);
+        });
+    }
+
+    // 切换POI标记显示/隐藏
+    function togglePOIMarkers() {
+        showPOIMarkers = !showPOIMarkers;
+        const btn = document.getElementById('togglePOIBtn');
+
+        if (showPOIMarkers) {
+            addMarkersToMap();
+            btn.classList.remove('btn-light');
+            btn.classList.add('btn-primary');
+            btn.innerHTML = '<i class="fas fa-map-marker-alt me-1"></i>隐藏标记';
+            showToast('POI地点标记已显示', 'info');
+        } else {
+            // 清除POI标记
+            markers.forEach(marker => map.remove(marker));
+            markers = [];
+            btn.classList.remove('btn-primary');
+            btn.classList.add('btn-light');
+            btn.innerHTML = '<i class="fas fa-map-marker-alt me-1"></i>地点标记';
+            showToast('POI地点标记已隐藏', 'info');
+        }
+    }
+
+    // 页面加载完成后绑定事件
+    document.addEventListener('DOMContentLoaded', function() {
+        // 初始化地图
+        initMap();
+
+        // 绑定按钮事件
+        document.getElementById('togglePOIBtn').addEventListener('click', togglePOIMarkers);
+        document.getElementById('clearMapBtn').addEventListener('click', clearMap);
+        document.getElementById('centerMapBtn').addEventListener('click', centerMap);
+        document.getElementById('planRouteBtn').addEventListener('click', planRoute);
+        document.getElementById('saveRouteBtn').addEventListener('click', saveRoute);
+        document.getElementById('myRoutesBtn').addEventListener('click', showMyRoutes);
+        document.getElementById('searchBtn').addEventListener('click', searchLocations);
+
+        // 绑定搜索输入框回车事件
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchLocations();
+            }
+        });
+
+        // 绑定类型筛选事件
+        document.getElementById('locationTypeFilter').addEventListener('change', searchLocations);
+    });
+  </script>

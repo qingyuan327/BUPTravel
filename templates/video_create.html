@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BUPTravel - 北邮校园导览</title>
+    <link href="{{url_for('static',filename='css/bootstrap.min.css')}}" rel="stylesheet">
+    <link href="{{url_for('static',filename='css/style.css')}}" rel="stylesheet">
+    <script src="{{url_for('static',filename='js/style.js')}}"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视频生成器</title>
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding-top: 2rem;
+        }
+        .video-container {
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        .preview-image {
+            max-width: 100%;
+            height: auto;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+        }
+        #videoResult {
+            width: 100%;
+            border-radius: 5px;
+            display: none;
+        }
+        .progress {
+            height: 20px;
+            margin: 1rem 0;
+        }
+        .status-message {
+            padding: 1rem;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 动态背景导航栏 -->
+  <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+    <div class="container">
+      <a class="navbar-brand" href="{{url_for('index')}}">
+        <span class="ms-2 d-none d-md-inline">BUPTravel</span>
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav me-auto">
+          <li class="nav-item"><a class="nav-link" href="{{url_for('index')}}">首页</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{url_for('index_about')}}">打卡指南</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{url_for('index_area')}}">行程规划</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{url_for('index_attraction')}}">场所查询</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{url_for('index_cultural')}}">回忆归档</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{url_for('index_food111')}}">味觉漫游</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{url_for('index_food')}}">我有话说</a></li>
+          <li class="nav-item"><a class="nav-link active" href="{{url_for('index_traffic')}}">视频生成</a></li>
+        </ul>
+        <div class="d-flex">
+          {% if 'username' in session %}
+            <span class="navbar-text me-3">欢迎, {{ session['username'] }}</span>
+            <a href="{{url_for('logout')}}" class="btn btn-outline-light btn-sm">退出</a>
+          {% else %}
+            <a href="{{url_for('index_login')}}" class="btn btn-outline-light btn-sm me-2">登录</a>
+            <a href="{{url_for('index_register')}}" class="btn btn-warning btn-sm">注册</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- 全屏视差标题区域 -->
+  <div class="parallax-header">
+    <div class="header-shapes">
+      <div class="shape shape-1"></div>
+      <div class="shape shape-2"></div>
+      <div class="shape shape-3"></div>
+    </div>
+    <div class="header-content">
+      <h1 class="header-title">视频生成</h1>
+      <p class="header-subtitle">以光影为笔，以时光为墨，将北邮的点滴绘制成流动的画卷。这不仅是影像的记录，更是对校园文化的诗意诠释。</p>
+    </div>
+    <div class="header-scroll">
+      <i class="bi bi-chevron-down" style="font-size: 2rem;"></i>
+    </div>
+  </div>
+
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="video-container">
+                    <h2 class="text-center mb-4">视频生成器</h2>
+                    
+                    <form id="videoForm">
+                        <div class="mb-3">
+                            <label for="imageUpload" class="form-label">上传图片</label>
+                            <input class="form-control" type="file" id="imageUpload" accept="image/*" required>
+                            <div class="mt-2">
+                                <img id="imagePreview" class="preview-image" style="display: none;">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="promptText" class="form-label">视频描述</label>
+                            <textarea class="form-control" id="promptText" rows="3" placeholder="例如：让画面动起来，两个人演京剧">eg:让画面动起来，两个人演京剧</textarea>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg" id="generateBtn">生成视频</button>
+                        </div>
+                    </form>
+                    
+                    <div id="statusMessage" class="status-message alert alert-info"></div>
+                    
+                    <div class="progress" id="progressBar" style="display: none;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                    </div>
+                    
+                    <div class="text-center mt-4">
+                        <video id="videoResult" controls></video>
+                    </div>
+                    
+                    <div class="text-center mt-3">
+                        <a id="downloadLink" class="btn btn-success" style="display: none;" download>下载视频</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const imageUpload = document.getElementById('imageUpload');
+            const imagePreview = document.getElementById('imagePreview');
+            const videoForm = document.getElementById('videoForm');
+            const generateBtn = document.getElementById('generateBtn');
+            const statusMessage = document.getElementById('statusMessage');
+            const progressBar = document.getElementById('progressBar');
+            const videoResult = document.getElementById('videoResult');
+            const downloadLink = document.getElementById('downloadLink');
+            
+            // 图片预览
+            imageUpload.addEventListener('change', function(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        imagePreview.src = e.target.result;
+                        imagePreview.style.display = 'block';
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+            
+            // 表单提交
+            videoForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const imageFile = imageUpload.files[0];
+                const promptText = document.getElementById('promptText').value;
+                
+                if (!imageFile) {
+                    showStatus('请上传图片', 'danger');
+                    return;
+                }
+                
+                generateBtn.disabled = true;
+                progressBar.style.display = 'block';
+                statusMessage.style.display = 'block';
+                showStatus('视频生成中，请稍候...', 'info');
+                
+                const formData = new FormData();
+                formData.append('image', imageFile);
+                formData.append('prompt', promptText);
+                
+                fetch('/api/generate-video', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        throw new Error(data.error);
+                    }
+                    
+                    showStatus('视频生成任务已提交，正在处理...', 'info');
+                    updateProgress(10);
+                    
+                    // 开始轮询任务状态
+                    const taskId = data.task_id;
+                    pollTaskStatus(taskId);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showStatus('生成失败: ' + error.message, 'danger');
+                    generateBtn.disabled = false;
+                    progressBar.style.display = 'none';
+                });
+            });
+            
+            // 轮询任务状态
+            function pollTaskStatus(taskId) {
+                fetch(`/api/check-video-status/${taskId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'SUCCESS') {
+                        updateProgress(100);
+                        showStatus('视频生成成功！', 'success');
+                        videoResult.src = data.video_url;
+                        videoResult.style.display = 'block';
+                        downloadLink.href = data.video_url;
+                        downloadLink.style.display = 'inline-block';
+                        generateBtn.disabled = false;
+                    } 
+                    else if (data.status === 'FAIL') {
+                        showStatus('生成失败: ' + (data.error || '未知错误'), 'danger');
+                        generateBtn.disabled = false;
+                        progressBar.style.display = 'none';
+                    }
+                    else if (data.status === 'PROCESSING') {
+                        // 继续轮询
+                        const currentProgress = parseInt(progressBar.querySelector('.progress-bar').style.width) || 10;
+                        const newProgress = Math.min(currentProgress + 10, 90);
+                        updateProgress(newProgress);
+                        
+                        setTimeout(() => pollTaskStatus(taskId), 5000);
+                    }
+                    else {
+                        showStatus('未知状态: ' + data.status, 'warning');
+                        generateBtn.disabled = false;
+                        progressBar.style.display = 'none';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking status:', error);
+                    showStatus('检查状态时出错', 'danger');
+                    generateBtn.disabled = false;
+                    progressBar.style.display = 'none';
+                });
+            }
+            
+            // 更新进度条
+            function updateProgress(percent) {
+                const progressBarInner = progressBar.querySelector('.progress-bar');
+                progressBarInner.style.width = percent + '%';
+                progressBarInner.textContent = percent + '%';
+            }
+            
+            // 显示状态消息
+            function showStatus(message, type) {
+                statusMessage.textContent = message;
+                statusMessage.className = `status-message alert alert-${type}`;
+                statusMessage.style.display = 'block';
+            }
+        });
+    </script>
+
+    <!-- 底部信息 -->
+  <footer class="footer">
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-4 mb-4 mb-lg-0">
+          <img src="{{url_for('static',filename='images/logo.jpg')}}" alt="BUPTravel" height="80">
+          <p class="mt-3">BUPTravel - 北邮校园导览平台，为您提供全方位的校园信息服务。</p>
+        </div>
+        <div class="col-lg-2 col-md-6 mb-4 mb-md-0">
+          <h5>快速链接</h5>
+          <ul class="list-unstyled">
+            <li><a href="{{url_for('index')}}">首页</a></li>
+            <li><a href="{{url_for('index_about')}}">打卡指南</a></li>
+            <li><a href="{{url_for('index_area')}}">行程规划</a></li>
+            <li><a href="{{url_for('index_attraction')}}">场所查询</a></li>
+          </ul>
+        </div>
+        <div class="col-lg-2 col-md-6 mb-4 mb-md-0">
+          <h5>更多服务</h5>
+          <ul class="list-unstyled">
+            <li><a href="{{url_for('index_cultural')}}">回忆归档</a></li>
+            <li><a href="{{url_for('index_food111')}}">味觉漫游</a></li>
+            <li><a href="{{url_for('index_food')}}">我有话说</a></li>
+            <li><a href="{{url_for('index_traffic')}}">视频生成</a></li>
+          </ul>
+        </div>
+        <div class="col-lg-4">
+          <h5>联系我们</h5>
+          <p><i class="fas fa-map-marker-alt me-2"></i> 北京市海淀区西土城路10号</p>
+          <p><i class="fas fa-envelope me-2"></i> contact@buptravel.com</p>
+          <div class="social-links mt-3">
+            <a href="#"><i class="fab fa-weixin fa-lg"></i></a>
+            <a href="#"><i class="fab fa-weibo fa-lg"></i></a>
+            <a href="#"><i class="fab fa-qq fa-lg"></i></a>
+          </div>
+        </div>
+      </div>
+      <hr>
+      <div class="text-center">
+        <p class="mb-0">&copy; 2025 BUPTravel. 版权所有.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="{{url_for('static',filename='js/script.js')}}"></script>
+</body>
+</html>
