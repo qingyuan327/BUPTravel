@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BUPTravel - 北邮校园导览</title>
+    <link href="{{url_for('static',filename='css/bootstrap.min.css')}}" rel="stylesheet">
+    <link href="{{url_for('static',filename='css/style.css')}}" rel="stylesheet">
+    <script src="{{url_for('static',filename='js/style.js')}}"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+      /* 基础样式与变量 */
+      :root {
+        --primary-color: #4e54c8;
+        --secondary-color: #8f94fb;
+        --accent-color: #ff7e5f;
+        --dark-color: #1a1a2e;
+        --light-color: #f8f9fa;
+        --glass-color: rgba(255, 255, 255, 0.15);
+      }
+
+      body {
+        font-family: 'Microsoft YaHei', sans-serif;
+        padding-top: 70px;
+        color: var(--dark-color);
+        background-color: #f5f5f5;
+        overflow-x: hidden;
+      }
+
+      /* 动态背景导航栏 */
+      .navbar {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+      }
+
+      .navbar.scrolled {
+        background: rgba(78, 84, 200, 0.9);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      .navbar-brand {
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+      }
+
+      /* 全屏视差标题区域 */
+      .parallax-header {
+        height: 100vh;
+        min-height: 600px;
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        text-align: center;
+      }
+
+      .header-content {
+        position: relative;
+        z-index: 2;
+        padding: 0 20px;
+      }
+
+      .header-title {
+        font-size: 4rem;
+        font-weight: 800;
+        margin-bottom: 1rem;
+        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+      }
+
+      .header-subtitle {
+        font-size: 1.5rem;
+        margin-bottom: 2rem;
+        opacity: 0.9;
+      }
+
+      .header-scroll {
+        position: absolute;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        animation: bounce 2s infinite;
+      }
+
+      @keyframes bounce {
+        0%, 20%, 50%, 80%, 100% {transform: translateY(0) translateX(-50%);}
+        40% {transform: translateY(-20px) translateX(-50%);}
+        60% {transform: translateY(-10px) translateX(-50%);}
+      }
+
+      .header-shapes {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+
+      .shape {
+        position: absolute;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      .shape-1 {
+        width: 300px;
+        height: 300px;
+        top: -50px;
+        left: -50px;
+      }
+
+      .shape-2 {
+        width: 200px;
+        height: 200px;
+        bottom: 100px;
+        right: 100px;
+      }
+
+      .shape-3 {
+        width: 150px;
+        height: 150px;
+        bottom: 200px;
+        left: 200px;
+      }
+
+      /* 部分标题样式 */
+      .section-title {
+        position: relative;
+        padding-bottom: 15px;
+        font-weight: 700;
+        text-align: center;
+        font-size: 2.5rem;
+        margin-bottom: 40px;
+      }
+
+      .section-title::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 80px;
+        height: 4px;
+        background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+        border-radius: 2px;
+      }
+
+      /* 校园介绍 - 不对称布局 */
+      .asymmetrical-intro {
+        padding: 80px 0;
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .glass-card {
+        background: var(--glass-color);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border-radius: 15px;
+        padding: 40px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .intro-content h2 {
+        font-size: 2.5rem;
+        margin-bottom: 20px;
+      }
+
+      .intro-content p {
+        margin-bottom: 15px;
+        font-size: 1.1rem;
+        line-height: 1.6;
+      }
+
+      .btn-glass {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        padding: 10px 25px;
+        border-radius: 50px;
+        margin-top: 20px;
+        transition: all 0.3s ease;
+      }
+
+      .btn-glass:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-3px);
+      }
+
+      .intro-image {
+        position: relative;
+        margin-top: -50px;
+      }
+
+      .intro-image img {
+        border-radius: 15px;
+        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+        position: relative;
+        z-index: 2;
+      }
+
+      .image-decoration {
+        position: absolute;
+        width: 200px;
+        height: 200px;
+        background: var(--accent-color);
+        border-radius: 50%;
+        bottom: -30px;
+        right: -30px;
+        z-index: 1;
+      }
+
+      /* 底部信息 */
+      .footer {
+        background: var(--primary-color);
+        color: white;
+        padding: 60px 0 30px;
+      }
+
+      .footer h5 {
+        font-size: 1.2rem;
+        margin-bottom: 20px;
+        position: relative;
+      }
+
+      .footer h5::after {
+        content: '';
+        position: absolute;
+        bottom: -10px;
+        left: 0;
+        width: 40px;
+        height: 2px;
+        background: var(--accent-color);
+      }
+
+      .footer a {
+        color: rgba(255, 255, 255, 0.7);
+        text-decoration: none;
+        transition: color 0.3s ease;
+        display: block;
+        margin-bottom: 10px;
+      }
+
+      .footer a:hover {
+        color: white;
+      }
+
+      .social-links a {
+        display: inline-block;
+        margin-right: 15px;
+        font-size: 1.2rem;
+      }
+
+      .footer hr {
+        border-color: rgba(255, 255, 255, 0.1);
+        margin: 30px 0;
+      }
+
+      /* 响应式调整 */
+      @media (max-width: 992px) {
+        .asymmetrical-intro .row {
+          flex-direction: column-reverse;
+        }
+        
+        .intro-image {
+          margin-top: 0;
+          margin-bottom: 30px;
+        }
+      }
+
+      @media (max-width: 768px) {
+        .header-title {
+          font-size: 2.5rem;
+        }
+        
+        .header-subtitle {
+          font-size: 1.2rem;
+        }
+        
+        .section-title {
+          font-size: 2rem;
+        }
+      }
+
+      @media (max-width: 576px) {
+        .header-title {
+          font-size: 2rem;
+        }
+      }
+
+      /* Custom styles for this page */
+      .nav-link.active {
+        color: white !important;
+        font-weight: bold;
+      }
+      
+      .carousel-item img {
+        height: 70vh;
+        object-fit: cover;
+      }
+      
+      .university-intro {
+        background-color: white;
+        padding: 60px 0;
+      }
+      
+      .university-image {
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+      }
+      
+      .university-image img {
+        width: 100%;
+        height: auto;
+        transition: transform 0.5s ease;
+      }
+      
+      .university-image:hover img {
+        transform: scale(1.05);
+      }
+      
+      .btn-primary {
+        background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+        border: none;
+        padding: 10px 25px;
+        border-radius: 50px;
+        transition: all 0.3s ease;
+      }
+      
+      .btn-primary:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(78, 84, 200, 0.4);
+      }
+      
+      .search-box {
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+      }
+      
+      .search-box::placeholder {
+        color: rgba(255, 255, 255, 0.7);
+      }
+    </style>
+</head>
+<body>
+  <!-- 动态背景导航栏 -->
+  <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+    <div class="container">
+      <a class="navbar-brand" href="{{url_for('index')}}">
+        <span class="ms-2 d-none d-md-inline">BUPTravel</span>
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav me-auto">
+          <li class="nav-item"><a class="nav-link" href="{{url_for('index')}}">首页</a></li>
+          <li class="nav-item"><a class="nav-link active" href="{{url_for('index_about')}}">打卡指南</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{url_for('index_area')}}">行程规划</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{url_for('index_attraction')}}">场所查询</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{url_for('index_cultural')}}">回忆归档</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{url_for('index_food111')}}">味觉漫游</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{url_for('index_food')}}">我有话说</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{url_for('index_traffic')}}">视频生成</a></li>
+        </ul>
+        <div class="d-flex">
+          {% if 'username' in session %}
+            <span class="navbar-text me-3">欢迎, {{ session['username'] }}</span>
+            <a href="{{url_for('logout')}}" class="btn btn-outline-light btn-sm">退出</a>
+          {% else %}
+            <a href="{{url_for('index_login')}}" class="btn btn-outline-light btn-sm me-2">登录</a>
+            <a href="{{url_for('index_register')}}" class="btn btn-warning btn-sm">注册</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- 全屏视差标题区域 -->
+  <div class="parallax-header">
+    <div class="header-shapes">
+      <div class="shape shape-1"></div>
+      <div class="shape shape-2"></div>
+      <div class="shape shape-3"></div>
+    </div>
+    <div class="header-content">
+      <h1 class="header-title">打卡指南</h1>
+      <p class="header-subtitle">砖瓦镌刻着岁月的密码，草木诉说着光阴的故事。循着这份指南，去触摸北邮的肌理，在楼宇角落间，寻觅时光遗落的人文印记。</p>
+    </div>
+    <div class="header-scroll">
+      <i class="bi bi-chevron-down" style="font-size: 2rem;"></i>
+    </div>
+  </div>
+
+  <!-- 校园介绍 -->
+  <section class="university-intro">
+    <div class="container">
+      <h2 class="section-title">北京邮电大学</h2>
+      
+      <div class="row align-items-center">
+        <div class="col-lg-4 mb-4 mb-lg-0">
+          <div class="university-image">
+            <img src="{{url_for('static',filename='images/by.jpg')}}" alt="北京邮电大学">
+          </div>
+        </div>
+        <div class="col-lg-8">
+          <div class="glass-card">
+            <div class="intro-content">
+              <p>北京邮电大学（Beijing University of Posts and Telecommunications），简称"北邮"，位于北京市，北京邮电大学是新中国第一所邮电高等学府，是教育部直属、工业和信息化部共建的全国重点大学，学校是"211工程"和"985"优势学科创新平台、入选"双一流"建设高校。为北京高科大学联盟 、中国人工智能产业发展联盟、CDIO工程教育联盟创始成员，入选 "111计划" "2011计划"、中国政府奖学金来华留学生接收院校、教育部第二批卓越工程师教育培养计划高校、国家建设高水平大学公派研究生项目、教育部首批"新工科"研究与实践项目、全国首批深化创新创业教育改革示范高校、一流网络安全学院建设示范项目高校、国家大学生文化素质教育基地、全国邮政行业人才培养基地。</p>
+              <p>北京邮电大学前身是1955年创办的北京邮电学院；1960年被确定为全国重点大学；1993年更名为北京邮电大学；1998年成为"211工程"重点建设大学；2000年由原信息产业部划转教育部管理；2011年成为"985优势学科创新平台"项目重点建设高校；2017年入选国家"双一流"建设高校。</p>
+              <p>截至2024年11月，北京邮电大学有海淀、昌平两个校区；设有19个教学单位，开设本科专业53个；拥有博士后科研流动站7个，一级学科博士学位授权点15个、一级学科硕士学位授权点24个、专业博士学位授权点1个、专业硕士学位授权点13类；有在职教职工2600余人，其中专任教师1700余人。</p>
+              <a href="#" class="btn btn-primary">了解更多</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 特色景点 -->
+  <section class="asymmetrical-intro">
+    <div class="container">
+      <div class="row align-items-center">
+        <div class="col-lg-6">
+          <div class="intro-image">
+            <img src="{{url_for('static',filename='images/banner1.jpg')}}" alt="北邮校园" class="img-fluid">
+            <div class="image-decoration"></div>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="intro-content">
+            <h2>校园特色景点</h2>
+            <p>北京邮电大学校园内有许多值得打卡的特色景点，从现代化的教学楼到历史悠久的建筑，每一处都承载着北邮的历史与文化。</p>
+            <p>主楼广场是学校的标志性建筑，宏伟壮观；图书馆藏书丰富，是学术研究的宝库；时光广场是学生休闲放松的好去处；还有各具特色的学院楼、实验室等。</p>
+            <p>无论你是新生还是访客，这些特色景点都不容错过，它们将为你展现北邮最真实、最美好的一面。</p>
+            <a href="#" class="btn btn-glass">查看所有景点</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 底部信息 -->
+  <footer class="footer">
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-4 mb-4 mb-lg-0 text-center">
+          <img src="{{url_for('static',filename='images/logo.jpg')}}" height="100px" class="mb-3">
+          <p>探索北邮，发现精彩</p>
+        </div>
+        <div class="col-lg-4 mb-4 mb-lg-0">
+          <h5>快速链接</h5>
+          <div class="row">
+            <div class="col-6">
+              <a href="{{url_for('index')}}">首页</a>
+              <a href="{{url_for('index_about')}}">打卡指南</a>
+              <a href="{{url_for('index_area')}}">行程规划</a>
+              <a href="{{url_for('index_attraction')}}">场所查询</a>
+            </div>
+            <div class="col-6">
+              <a href="{{url_for('index_cultural')}}">回忆归档</a>
+              <a href="{{url_for('index_food111')}}">味觉漫游</a>
+              <a href="{{url_for('index_food')}}">我有话说</a>
+              <a href="{{url_for('index_traffic')}}">视频生成</a>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-4">
+          <h5>联系我们</h5>
+          <p>邮箱: contact@buptravel.com</p>
+          <p>电话: 010-12345678</p>
+          <div class="social-links">
+            <a href="#"><i class="bi bi-wechat"></i></a>
+            <a href="#"><i class="bi bi-weibo"></i></a>
+            <a href="#"><i class="bi bi-qq"></i></a>
+            <a href="#"><i class="bi bi-bilibili"></i></a>
+          </div>
+        </div>
+      </div>
+      <hr>
+      <div class="text-center">
+        <p class="mb-0">&copy; 2025 北京邮电大学 BUPTravel 项目组. 保留所有权利.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+  
+  <script>
+    // 导航栏滚动效果
+    window.addEventListener('scroll', function() {
+      const navbar = document.querySelector('.navbar');
+      if (window.scrollY > 50) {
+        navbar.classList.add('scrolled');
+      } else {
+        navbar.classList.remove('scrolled');
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BUPTravel - 北邮校园导览</title>
+    <link href="{{url_for('static',filename='css/bootstrap.min.css')}}" rel="stylesheet">
+    <link href="{{url_for('static',filename='css/style.css')}}" rel="stylesheet">
+    <script src="{{url_for('static',filename='js/style.js')}}"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+  <!-- 动态背景导航栏 -->
+  <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+    <div class="container">
+      <a class="navbar-brand" href="{{url_for('index')}}">
+        <span class="ms-2 d-none d-md-inline">BUPTravel</span>
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav me-auto">
+          <li class="nav-item"><a class="nav-link active" href="{{url_for('index')}}">首页</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{url_for('index_about')}}">打卡指南</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{url_for('index_area')}}">行程规划</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{url_for('index_attraction')}}">场所查询</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{url_for('index_cultural')}}">回忆归档</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{url_for('index_food111')}}">味觉漫游</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{url_for('index_food')}}">我有话说</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{url_for('index_traffic')}}">视频生成</a></li>
+        </ul>
+        <div class="d-flex">
+          {% if 'username' in session %}
+            <span class="navbar-text me-3">欢迎, {{ session['username'] }}</span>
+            <a href="{{url_for('logout')}}" class="btn btn-outline-light btn-sm">退出</a>
+          {% else %}
+            <a href="{{url_for('index_login')}}" class="btn btn-outline-light btn-sm me-2">登录</a>
+            <a href="{{url_for('index_register')}}" class="btn btn-warning btn-sm">注册</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- 全屏视差标题区域 -->
+  <header class="parallax-header">
+    <div class="header-content">
+      <h1 class="header-title">探索北邮</h1>
+      <p class="header-subtitle">推开这扇数字之门，历史的回响与当下的鲜活在此交织。北邮的岁月沉淀与青春律动，皆在此铺展成卷，静候探寻者的目光。</p>
+      <div class="header-scroll">
+        <span>向下滚动</span>
+        <i class="fas fa-chevron-down"></i>
+      </div>
+    </div>
+    <div class="header-shapes">
+      <div class="shape shape-1"></div>
+      <div class="shape shape-2"></div>
+      <div class="shape shape-3"></div>
+    </div>
+  </header>
+
+  <!-- 动态网格布局 -->
+  <section class="dynamic-grid">
+    <div class="container">
+      <div class="grid-container">
+        <div class="grid-item main-item" >
+          <img src="{{url_for('static',filename='images/travel06.jpg')}}">
+          <div class="grid-content">
+            <h3>校园地标</h3>
+            <p>探索北邮最具代表性的建筑和景观</p>
+            <a href="{{url_for('index_attraction')}}" class="btn btn-outline-light">查看详情</a>
+          </div>
+        </div>
+        <div class="grid-item">
+          <img src="{{url_for('static',filename='images/美食.jpg')}}">
+          <div class="grid-content">
+            <h3>美食地图</h3>
+            <a href="{{url_for('index_food111')}}" class="stretched-link"></a>
+          </div>
+        </div>
+        <div class="grid-item">
+          <img src="{{url_for('static',filename='images/微信图片_20250421195417.jpg')}}">
+          <div class="grid-content">
+            <h3>回忆归档</h3>
+            <a href="{{url_for('index_cultural')}}" class="stretched-link"></a>
+          </div>
+        </div>
+        <div class="grid-item">
+          <img src="{{url_for('static',filename='images/travel04.jpg')}}">
+          <div class="grid-content">
+            <h3>行程规划</h3>
+            <a href="{{url_for('index_area')}}" class="stretched-link"></a>
+          </div>
+        </div>
+        <div class="grid-item">
+          <img src="{{url_for('static',filename='images/by.jpg')}}">
+          <div class="grid-content">
+            <h3>打卡指南</h3>
+            <a href="{{url_for('index_about')}}" class="stretched-link"></a>
+          </div>
+        </div>
+        <div class="grid-item">
+          <img src="{{url_for('static',filename='images/chaogan.jpg')}}">
+          <div class="grid-content">
+            <h3>视频生成</h3>
+            <a href="{{url_for('index_traffic')}}" class="stretched-link"></a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 特色景点 - 悬浮卡片 -->
+  <section class="floating-spots">
+    <div class="container">
+      <h2 class="section-title">北邮特色景点</h2>
+      <div class="floating-container">
+        <div class="floating-card">
+          <div class="card-image">
+            <img src="{{url_for('static',filename='images/travel04.jpg')}}" alt="教学三号楼">
+          </div>
+          <div class="card-content">
+            <h3>教学三号楼</h3>
+            <p>北邮的核心教学楼，内部环境干净整洁，配有自动扶梯，是北邮学子学习的地方。</p>
+            <a href="{{url_for('index_attraction')}}" class="btn btn-float">了解更多</a>
+          </div>
+        </div>
+        <div class="floating-card">
+          <div class="card-image">
+            <img src="{{url_for('static',filename='images/travel05.jpg')}}" alt="摩斯电码路">
+          </div>
+          <div class="card-content">
+            <h3>摩斯电码路</h3>
+            <p>北邮西门到校训石之间步行道的铺装以世界上第一条电报码摩斯码为蓝本，将校训的文字内容在校训石前面铺陈开。</p>
+            <a href="{{url_for('index_attraction')}}" class="btn btn-float">了解更多</a>
+          </div>
+        </div>
+        <div class="floating-card">
+          <div class="card-image">
+            <img src="{{url_for('static',filename='images/travel06.jpg')}}" alt="卓越柱">
+          </div>
+          <div class="card-content">
+            <h3>卓越柱</h3>
+            <p>卓越柱建于2005年7月我校50周年校庆之前。每根柱子由一块整石雕刻而成，并雕刻着不同形态的校徽。</p>
+            <a href="{{url_for('index_attraction')}}" class="btn btn-float">了解更多</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 校园介绍 - 不对称布局 -->
+  <section class="asymmetrical-intro">
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-7">
+          <div class="intro-content glass-card">
+            <h2>关于北京邮电大学</h2>
+            <p>北京邮电大学（Beijing University of Posts and Telecommunications），简称"北邮"，位于北京市，是新中国第一所邮电高等学府，是教育部直属、工业和信息化部共建的全国重点大学。</p>
+            <p>学校是"211工程"和"985"优势学科创新平台、入选"双一流"建设高校。为北京高科大学联盟、中国人工智能产业发展联盟、CDIO工程教育联盟创始成员。</p>
+            <a href="{{url_for('index_about')}}" class="btn btn-glass">了解更多校史</a>
+          </div>
+        </div>
+        <div class="col-lg-5">
+          <div class="intro-image">
+            <img src="{{url_for('static',filename='images/1744636014540.png')}}" alt="北邮校园全景" class="img-fluid">
+            <div class="image-decoration"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 美食推荐 - 卡片滑动 -->
+  <section class="food-slider">
+    <div class="container">
+      <h2 class="section-title">校园美食推荐</h2>
+      <div class="slider-container">
+        <div class="food-slide">
+          <img src="{{url_for('static',filename='images/food5.jpg')}}" alt="清蒸大闸蟹">
+          <div class="slide-content">
+            <h3>清蒸大闸蟹</h3>
+            <p>校园餐厅秋季限定美食，选用新鲜大闸蟹，清蒸保留原汁原味。</p>
+            <span class="location">学一食堂二楼</span>
+          </div>
+        </div>
+        <div class="food-slide">
+          <img src="{{url_for('static',filename='images/food4.jpg')}}" alt="香脆醋汁梅花肉">
+          <div class="slide-content">
+            <h3>香脆醋汁梅花肉</h3>
+            <p>外酥里嫩，酸甜可口，是校园餐厅的招牌菜之一。</p>
+            <span class="location">学二食堂一楼</span>
+          </div>
+        </div>
+        <div class="food-slide">
+          <img src="{{url_for('static',filename='images/food3.jpg')}}" alt="北邮特色小吃">
+          <div class="slide-content">
+            <h3>北邮特色小吃</h3>
+            <p>多种校园特色小吃，满足不同口味需求。</p>
+            <span class="location">校园小吃街</span>
+          </div>
+        </div>
+      </div>
+      <div class="text-center mt-4">
+        <a href="{{url_for('index_food111')}}" class="btn btn-slider">查看更多美食推荐</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- 回忆相册 - 拼贴效果 -->
+  <section class="memory-collage">
+    <div class="container">
+      <h2 class="section-title">回忆相册</h2>
+      <div class="collage-container">
+        <div class="collage-item big">
+          <img src="{{url_for('static',filename='images/cultural01.png')}}" alt="图书馆漫游">
+          <div class="collage-overlay">
+            <h3>图书馆漫游</h3>
+            <a href="{{url_for('index_cultural')}}">查看详情</a>
+          </div>
+        </div>
+        <div class="collage-item">
+          <img src="{{url_for('static',filename='images/cultural00.png')}}" alt="北邮经管楼">
+          <div class="collage-overlay">
+            <h3>北邮经管楼</h3>
+            <a href="{{url_for('index_cultural')}}">查看详情</a>
+          </div>
+        </div>
+        <div class="collage-item tall">
+          <img src="{{url_for('static',filename='images/cultural05.png')}}" alt="北邮马克思主义楼">
+          <div class="collage-overlay">
+            <h3>马克思主义楼</h3>
+            <a href="{{url_for('index_cultural')}}">查看详情</a>
+          </div>
+        </div>
+        <div class="collage-item wide">
+          <img src="{{url_for('static',filename='images/cultural03.png')}}" alt="校园活动">
+          <div class="collage-overlay">
+            <h3>校园活动</h3>
+            <a href="{{url_for('index_cultural')}}">查看详情</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 底部信息 -->
+  <footer class="footer">
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-4 mb-4 mb-lg-0">
+          <img src="{{url_for('static',filename='images/logo.jpg')}}" alt="BUPTravel" height="80">
+          <p class="mt-3">BUPTravel - 北邮校园导览平台，为您提供全方位的校园信息服务。</p>
+        </div>
+        <div class="col-lg-2 col-md-6 mb-4 mb-md-0">
+          <h5>快速链接</h5>
+          <ul class="list-unstyled">
+            <li><a href="{{url_for('index')}}">首页</a></li>
+            <li><a href="{{url_for('index_about')}}">打卡指南</a></li>
+            <li><a href="{{url_for('index_area')}}">行程规划</a></li>
+            <li><a href="{{url_for('index_attraction')}}">场所查询</a></li>
+          </ul>
+        </div>
+        <div class="col-lg-2 col-md-6 mb-4 mb-md-0">
+          <h5>更多服务</h5>
+          <ul class="list-unstyled">
+            <li><a href="{{url_for('index_cultural')}}">回忆归档</a></li>
+            <li><a href="{{url_for('index_food111')}}">味觉漫游</a></li>
+            <li><a href="{{url_for('index_food')}}">我有话说</a></li>
+            <li><a href="{{url_for('index_traffic')}}">视频生成</a></li>
+          </ul>
+        </div>
+        <div class="col-lg-4">
+          <h5>联系我们</h5>
+          <p><i class="fas fa-map-marker-alt me-2"></i> 北京市海淀区西土城路10号</p>
+          <p><i class="fas fa-envelope me-2"></i> contact@buptravel.com</p>
+          <div class="social-links mt-3">
+            <a href="#"><i class="fab fa-weixin fa-lg"></i></a>
+            <a href="#"><i class="fab fa-weibo fa-lg"></i></a>
+            <a href="#"><i class="fab fa-qq fa-lg"></i></a>
+          </div>
+        </div>
+      </div>
+      <hr>
+      <div class="text-center">
+        <p class="mb-0">&copy; 2025 BUPTravel. 版权所有.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="{{url_for('static',filename='js/script.js')}}"></script>
+</body>
+</html>
